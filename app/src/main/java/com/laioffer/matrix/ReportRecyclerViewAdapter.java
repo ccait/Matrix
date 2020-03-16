@@ -6,8 +6,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 
@@ -18,18 +16,19 @@ public class ReportRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView
     private LayoutInflater mInflater;
 
     private OnClickListener mClickListener;
-    public ReportRecyclerViewAdapter(Context context, List<Item> items) {
-        this.mInflater = LayoutInflater.from(context);
-        this.mItems = items;
-    }
+
     public interface OnClickListener{
-        public void setItem(String item);
+        void setItem(String item);
     }
 
     public void setClickListener(ReportRecyclerViewAdapter.OnClickListener callback) {
         mClickListener = callback;
     }
 
+    public ReportRecyclerViewAdapter(Context context, List<Item> items) {
+        this.mInflater = LayoutInflater.from(context);
+        this.mItems = items;
+    }
 
     /**
      * Step 2: create holder prepare listview to show
@@ -37,7 +36,6 @@ public class ReportRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView
      * @param viewType mView type
      * @return created mView holder
      */
-    @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = mInflater.inflate(R.layout.recyclerview_item, parent, false);
