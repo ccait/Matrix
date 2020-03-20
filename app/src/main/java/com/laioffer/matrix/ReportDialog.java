@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Bitmap;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -154,6 +155,10 @@ public class ReportDialog extends Dialog {
         }
     }
 
+    public void updateImage(Bitmap bitmap) {
+        mImageCamera.setImageBitmap(bitmap);
+    }
+
     private void setUpEventSpecs(final View dialogView) {
         mImageCamera = (ImageView) dialogView.findViewById(R.id.event_camera_img);
         mBackButton = (Button) dialogView.findViewById(R.id.event_back_button);
@@ -179,6 +184,13 @@ public class ReportDialog extends Dialog {
             @Override
             public void onClick(View v) {
                 mViewSwitcher.showPrevious();
+            }
+        });
+
+        mImageCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mDialogCallBack.startCamera();
             }
         });
     }
