@@ -1,11 +1,17 @@
 package com.laioffer.matrix;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.location.Location;
+import android.util.Log;
 
 import org.apache.commons.codec.binary.Hex;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +40,30 @@ public class Utils {
     }
 
     /**
+     * Transform time unit to different time format
+     * @param millis time stamp
+     * @return formatted string of time stamp
+     */
+    public static String timeTransformer(long millis) {
+        long currenttime = System.currentTimeMillis();
+        long diff = currenttime - millis;
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(diff);
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
+        long hours = TimeUnit.MILLISECONDS.toHours(diff);
+        long days = TimeUnit.MILLISECONDS.toDays(diff);
+
+        if (seconds < 60) {
+            return seconds + " seconds ago";
+        } else if (minutes < 60) {
+            return minutes + " minutes ago";
+        } else if (hours < 24) {
+            return hours + " hours ago";
+        } else {
+            return days + " days ago";
+        }
+    }
+
+    /**
      * Get distance between two locations
      * @param currentLatitude current latitude
      * @param currentLongitude current longitude
@@ -41,11 +71,7 @@ public class Utils {
      * @param destLongitude destination longitude
      * @return the distance between two locations by miles
      */
-    public static int distanceBetweenTwoLocations(double currentLatitude,
-                                                  double currentLongitude,
-                                                  double destLatitude,
-                                                  double destLongitude) {
-
+    public static int distanceBetweenTwoLocations(double currentLatitude, double currentLongitude, double destLatitude, double destLongitude) {
         Location currentLocation = new Location("CurrentLocation");
         currentLocation.setLatitude(currentLatitude);
         currentLocation.setLongitude(currentLongitude);
@@ -85,27 +111,28 @@ public class Utils {
     }
 
     /**
-     * Transform time unit to different time format
-     * @param millis time stamp
-     * @return formatted string of time stamp
+     * Download an Image from the given URL, then decodes and returns a Bitmap object.
+     * @param imageUrl the url fetching from the remote
+     * @return the bitmap object
      */
-    public static String timeTransformer(long millis) {
-        long currenttime = System.currentTimeMillis();
-        long diff = currenttime - millis;
-        long seconds = TimeUnit.MILLISECONDS.toSeconds(diff);
-        long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
-        long hours = TimeUnit.MILLISECONDS.toHours(diff);
-        long days = TimeUnit.MILLISECONDS.toDays(diff);
+    public static Bitmap getBitmapFromURL(String imageUrl) {
+        Bitmap bitmap = null;
 
-        if (seconds < 60) {
-            return seconds + " seconds ago";
-        } else if (minutes < 60) {
-            return minutes + " minutes ago";
-        } else if (hours < 24) {
-            return hours + " hours ago";
-        } else {
-            return days + " days ago";
+        if (bitmap == null) {
+            try {
+                URL url = new URL(imageUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setDoInput(true);
+                connection.connect();
+                InputStream input = connection.getInputStream();
+                bitmap = BitmapFactory.decodeStream(input);
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e("Error: ", e.getMessage().toString());
+            }
         }
+
+        return bitmap;
     }
 }
 

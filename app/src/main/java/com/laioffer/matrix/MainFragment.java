@@ -2,11 +2,13 @@ package com.laioffer.matrix;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -15,6 +17,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import android.provider.MediaStore;
+import android.speech.RecognizerIntent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,8 +54,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Locale;
 
 import static android.app.Activity.RESULT_OK;
+import static com.laioffer.matrix.Config.listItems;
 
 public class MainFragment extends Fragment implements OnMapReadyCallback, ReportDialog.DialogCallBack, GoogleMap.OnMarkerClickListener {
     private MapView mapView;
@@ -61,9 +67,11 @@ public class MainFragment extends Fragment implements OnMapReadyCallback, Report
     private LocationTracker locationTracker;
     private FloatingActionButton fabReport;
     private FloatingActionButton fabFocus;
+    private FloatingActionButton speakNow;
     private ReportDialog dialog;
     private DatabaseReference database;
     private static final int REQUEST_CAPTURE_IMAGE = 100;
+    private static final int REQ_CODE_SPEECH_INPUT = 101;
     //private final String path = Environment.getExternalStorageDirectory() + "/temp.png";
     private File destination;
     private FirebaseStorage storage;
@@ -129,11 +137,33 @@ public class MainFragment extends Fragment implements OnMapReadyCallback, Report
                 mapView.getMapAsync(MainFragment.this);
             }
         });
+        speakNow = view.findViewById(R.id.voice);
+        speakNow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                askSpeechInput("Hi speak something");
+            }
+        });
 
         if (mapView != null) {
             mapView.onCreate(null);
             mapView.onResume();// needed to get the map to display immediately
             mapView.getMapAsync(this);
+        }
+    }
+
+    private void askSpeechInput(String string) {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000);
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                string);
+        try {
+            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
+        } catch (ActivityNotFoundException a) {
+
         }
     }
 
@@ -197,9 +227,12 @@ public class MainFragment extends Fragment implements OnMapReadyCallback, Report
     }
 
     private void showDialog(String label, String prefillText) {
-        int cx = (int) (fabReport.getX() + (fabReport.getWidth() / 2));
-        int cy = (int) (fabReport.getY()) + fabReport.getHeight() + 56;
-        dialog = ReportDialog.newInstance(getContext(), cx, cy);
+        //int cx = (int) (fabReport.getX() + (fabReport.getWidth() / 2));
+        //int cy = (int) (fabReport.getY()) + fabReport.getHeight() + 56;
+        //dialog = ReportDialog.newInstance(getContext(), cx, cy);
+        //dialog.setDialogCallBack(this);
+        dialog = new ReportDialog(getContext());
+        dialog.setVocieInfor(label, prefillText);
         dialog.setDialogCallBack(this);
         dialog.show();
     }
@@ -282,6 +315,30 @@ public class MainFragment extends Fragment implements OnMapReadyCallback, Report
                         fo.close();
                     } catch (IOException e) {
                         e.printStackTrace();
+                    }
+                }
+                break;
+            }
+            case REQ_CODE_SPEECH_INPUT: {
+                if (resultCode == RESULT_OK && null != data) {
+
+                    ArrayList<String> result = data
+                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    if (result.size() > 0) {
+                        final String sentence = result.get(0);
+                        boolean isMatch = false;
+                        for (int i = 0; i < listItems.size(); i++) {
+                            final String label = listItems.get(i).getDrawable_label();
+                            if (sentence.toLowerCase().contains(label.toLowerCase())) {
+                                //Toast.makeText(getContext(), sentence, Toast.LENGTH_LONG).show();
+                                showDialog(label, sentence);
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                        if (!isMatch) {
+                            askSpeechInput("Try again");
+                        }
                     }
                 }
                 break;
@@ -397,6 +454,16 @@ public class MainFragment extends Fragment implements OnMapReadyCallback, Report
         mEventTextType = (TextView) view.findViewById(R.id.event_info_type_text);
         mEventTextLocation = (TextView) view.findViewById(R.id.event_info_location_text);
         mEventTextTime = (TextView) view.findViewById(R.id.event_info_time_text);
+
+        mEventImageLike.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int number = Integer.parseInt(mEventTextLike.getText().toString());
+                database.child("events").child(mEvent.getId()).child("event_like_number").setValue(number + 1);
+                mEventTextLike.setText(String.valueOf(number + 1));
+            }
+        });
+
     }
     @Override
     public boolean onMarkerClick(Marker marker) {
@@ -416,7 +483,37 @@ public class MainFragment extends Fragment implements OnMapReadyCallback, Report
         mEventTextLike.setText(String.valueOf(likeNumber));
         mEventTextType.setText(type);
 
-        mEventImageType.setImageDrawable(ContextCompat.getDrawable(getContext(), Config.trafficMap.get(type)));
+        final String url = mEvent.getImgUri();
+        if (url == null) {
+            mEventImageType.setImageDrawable(ContextCompat.getDrawable(getContext(), Config.trafficMap.get(type)));
+        } else {
+//           new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    Log.d("Here", Thread.currentThread().getName());
+//                    final Bitmap bitmap = Utils.getBitmapFromURL(url);
+//                    getActivity().runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            mEventImageType.setImageBitmap(bitmap);
+//                        }
+//                    });
+//                }
+//            }).start();
+            new AsyncTask<Void, Void, Bitmap>() {
+                    @Override
+                    protected Bitmap doInBackground(Void... voids) {
+                        Bitmap bitmap = Utils.getBitmapFromURL(url);
+                        return bitmap;
+                    }
+
+                    @Override
+                    protected void onPostExecute(Bitmap bitmap) {
+                        super.onPostExecute(bitmap);
+                        mEventImageType.setImageBitmap(bitmap);
+                    }
+                }.execute();
+            }
 
         if (user == null) {
             user = "";

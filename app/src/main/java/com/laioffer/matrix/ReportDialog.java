@@ -31,7 +31,8 @@ public class ReportDialog extends Dialog {
     private RecyclerView mRecyclerView;
     private ReportRecyclerViewAdapter mRecyclerViewAdapter;
     private ViewSwitcher mViewSwitcher;
-    private String mEventype;
+    private String mEventType;
+    private String mPrefillText;
     //Event specs
     private ImageView mImageCamera;
     private Button mBackButton;
@@ -147,11 +148,11 @@ public class ReportDialog extends Dialog {
     }
 
     private void showNextViewSwitcher(String item) {
-        mEventype = item;
+        mEventType = item;
         if (mViewSwitcher != null) {
             mViewSwitcher.showNext();
-            mTypeTextView.setText(mEventype);
-            mEventTypeImg.setImageDrawable(ContextCompat.getDrawable(getContext(),Config.trafficMap.get(mEventype)));
+            mTypeTextView.setText(mEventType);
+            mEventTypeImg.setImageDrawable(ContextCompat.getDrawable(getContext(),Config.trafficMap.get(mEventType)));
         }
     }
 
@@ -169,14 +170,14 @@ public class ReportDialog extends Dialog {
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mDialogCallBack.onSubmit(mCommentEditText.getText().toString(), mEventype);
+                mDialogCallBack.onSubmit(mCommentEditText.getText().toString(), mEventType);
 
             }
         });
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mDialogCallBack.onSubmit(mCommentEditText.getText().toString(), mEventype);
+                mDialogCallBack.onSubmit(mCommentEditText.getText().toString(), mEventType);
             }
         });
 
@@ -197,6 +198,24 @@ public class ReportDialog extends Dialog {
 
     public void setDialogCallBack(DialogCallBack dialogCallBack) {
         mDialogCallBack = dialogCallBack;
+    }
+
+    public void setVocieInfor(String event_type, String prefillText) {
+        mEventType = event_type;
+        mPrefillText = prefillText;
+
+    }
+
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (mEventType != null) {
+            showNextViewSwitcher(mEventType);
+        }
+        if (mPrefillText != null) {
+            mCommentEditText.setText(mPrefillText);
+        }
     }
 
 }
